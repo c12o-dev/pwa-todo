@@ -137,3 +137,10 @@ list.addEventListener("change", (evt) => {
 
 // 保存済みタスクの復元。DOM さえ使えればよいので DOMContentLoaded で早めに描画
 document.addEventListener("DOMContentLoaded", load);
+
+// Service Worker 登録。初回表示のリソースと帯域を奪い合わないよう load(全部読み込み後)に遅らせる
+window.addEventListener("load", () => {
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js");
+  }
+});
