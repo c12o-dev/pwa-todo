@@ -1,0 +1,16 @@
+# dependencies
+node_modules/
+
+# logs
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.zed/
+
+# tooling / local
+.claude/
+
+# learning notes (公開資料は別途作成)
+note/
