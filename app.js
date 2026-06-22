@@ -3,8 +3,6 @@ const input = document.getElementById("task");
 const taskForm = document.getElementById("taskForm");
 const list = document.getElementById("tasks");
 
-const STORAGE_KEY = "tasks";
-
 // ===== 描画 =====
 
 // 1タスク分の li を組み立てて返す（生成の責務をここに集約）
@@ -79,19 +77,62 @@ function startEditing(item) {
   editor.focus();
 }
 
-// ===== 永続化（localStorage）=====
-// 保存の出入り口はこの2関数だけ。
+// ===== 永続化（IndexedDB）=====
+// 保存の出入り口はこの2関数だけ。localStorage → IndexedDB はここだけの差し替えで済んだ。
 
-function save() {
+// --- ヘルパー：イベントベースの IndexedDB を Promise 化する ---
+function promisifyRequest(request) {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+const txDone = (tx) =>
+  new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+
+// --- 接続：起動時に一度だけ開き、Promise を使い回す ---
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open("pwa-todo-db", 1);
+
+    // ストアを作れるのは onupgradeneeded（バージョンが上がったとき）の中だけ
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore("tasks", { autoIncrement: true });
+    };
+
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+const dbPromise = openDB();
+
+// --- 保存：DOM を {text, done} の配列にして「全消し→全追加」 ---
+async function save() {
+  // DOM スナップショットは同期で先に取る（await をまたぐと DOM が変わりうるため）
   const tasks = [...list.children].map((item) => ({
     text: item.querySelector("span").textContent,
     done: item.querySelector('input[data-action="toggle"]').checked,
   }));
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+
+  const db = await dbPromise;
+  const tx = db.transaction("tasks", "readwrite");
+  const store = tx.objectStore("tasks");
+  store.clear(); // 一旦全消し
+  for (const task of tasks) store.add(task); // id は autoIncrement に任せる
+  await txDone(tx); // トランザクション完了を待つ
 }
 
-function load() {
-  const tasks = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
+// --- 読み込み：全件取得して描画 ---
+async function load() {
+  const db = await dbPromise;
+  const tx = db.transaction("tasks", "readonly");
+  const tasks = await promisifyRequest(tx.objectStore("tasks").getAll());
   for (const { text, done } of tasks) {
     list.appendChild(createTaskItem(text, done));
   }
