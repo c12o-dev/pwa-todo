@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PWA TODO</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <h1 class="app__title">TODO</h1>
+
+      <form id="taskForm" class="add-form">
+        <label class="sr-only" for="task">タスク</label>
+        <input
+          type="text"
+          id="task"
+          name="task"
+          class="add-form__input"
+          placeholder="やることを入力…"
+          autocomplete="off"
+          required
+        />
+        <input id="addBtn" class="add-form__btn" type="submit" value="追加" />
+      </form>
+
+      <ul id="tasks" class="task-list"></ul>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>
